@@ -7,6 +7,7 @@ import prisma from './prismaClient.js';
 import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -543,12 +544,13 @@ app.get('/api/settings', async (req, res) => {
   }
 });
 
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../FrontEnd/dist')));
+// Serve static assets in production if FrontEnd build is present
+const frontendDistPath = path.join(__dirname, '../FrontEnd/dist');
+if (process.env.NODE_ENV === 'production' && fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
   app.get('*', (req, res) => {
     if (!req.path.startsWith('/api/')) {
-      res.sendFile(path.join(__dirname, '../FrontEnd/dist/index.html'));
+      res.sendFile(path.join(frontendDistPath, 'index.html'));
     }
   });
 }
