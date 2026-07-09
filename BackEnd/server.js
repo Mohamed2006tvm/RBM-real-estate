@@ -554,6 +554,10 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`🚀 RBM Real Estate API active at http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'serverless') {
+  app.listen(PORT, () => {
+    console.log(`🚀 RBM Real Estate API active at http://localhost:${PORT}`);
+  });
+}
+
+export default app;
