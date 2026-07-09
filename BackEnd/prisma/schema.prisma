@@ -1,0 +1,345 @@
+// Prisma schema for RBM Realestate platform
+// Optimized for PostgreSQL
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User Roles
+enum UserRole {
+  ADMIN
+  AGENT
+  CLIENT
+}
+
+// Property Types
+enum PropertyType {
+  PENTHOUSE
+  VILLA
+  RESIDENTIAL
+  COMMERCIAL
+}
+
+// Listing Purposes
+enum ListingPurpose {
+  SALE
+  RENT
+}
+
+// Construction Stages
+enum ConstructionStage {
+  READY
+  UNDER_CONSTRUCTION
+}
+
+// Lead Statuses
+enum LeadStatus {
+  NEW
+  CONTACTED
+  VISITING
+  CLOSED
+}
+
+// Appointment Statuses
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+// 1. Users Model
+model User {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String           @db.VarChar(100)
+  email           String           @unique @db.VarChar(150)
+  phone           String?          @unique @db.VarChar(20)
+  password        String           @db.VarChar(255)
+  role            UserRole         @default(CLIENT)
+  profileImage    String?          @map("profile_image") @db.VarChar(255)
+  status          String           @default("ACTIVE") @db.VarChar(20)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz
+  
+  // Relations
+  agentProfile    Agent?
+  createdProperties Property[]     @relation("CreatedProperties")
+  blogs           Blog[]           @relation("UserBlogs")
+  appointments    Appointment[]    @relation("CustomerAppointments")
+  savedProperties SavedProperty[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+  @@map("users")
+}
+
+// 2. Agents Model
+model Agent {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @unique @map("user_id") @db.Uuid
+  designation    String           @db.VarChar(100)
+  experience     Int              @default(0)
+  bio            String?          @db.Text
+  specialization String?          @db.VarChar(150)
+  rating         Decimal          @default(5.00) @db.Decimal(3, 2)
+
+  // Relations
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads          Lead[]           @relation("AgentLeads")
+  appointments   Appointment[]    @relation("AgentAppointments")
+
+  @@map("agents")
+}
+
+// 3. Properties Model
+model Property {
+  id                 String            @id @default(uuid()) @db.Uuid
+  title              String            @db.VarChar(200)
+  slug               String            @unique @db.VarChar(255)
+  description        String            @db.Text
+  propertyType       PropertyType      @map("property_type")
+  purpose            ListingPurpose
+  price              Decimal           @db.Decimal(15, 2)
+  currency           String            @default("USD") @db.VarChar(10)
+  bedrooms           Int               @default(0)
+  bathrooms          Int               @default(0)
+  balconies          Int               @default(0)
+  parking            Int               @default(0)
+  area               Decimal           @db.Decimal(10, 2)
+  areaUnit           String            @default("SQFT") @map("area_unit") @db.VarChar(10)
+  furnishing         String            @default("UNFURNISHED") @db.VarChar(50)
+  status             String            @default("AVAILABLE") @db.VarChar(20)
+  featured           Boolean           @default(false)
+  constructionStatus ConstructionStage @map("construction_status")
+  builderName        String?           @map("builder_name") @db.VarChar(150)
+  reraId             String?           @map("rera_id") @db.VarChar(50)
+  address            String            @db.Text
+  city               String            @db.VarChar(100)
+  state              String            @db.VarChar(100)
+  country            String            @db.VarChar(100)
+  latitude           Decimal?          @db.Decimal(10, 8)
+  longitude          Decimal?          @db.Decimal(11, 8)
+  createdBy          String            @map("created_by") @db.Uuid
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  deletedAt          DateTime?         @map("deleted_at") @db.Timestamptz
+
+  // Relations
+  creator            User              @relation("CreatedProperties", fields: [createdBy], references: [id], onDelete: Restrict)
+  images             PropertyImage[]
+  amenities          PropertyAmenity[]
+  documents          PropertyDocument[]
+  videos             PropertyVideo[]
+  leads              Lead[]
+  appointments       Appointment[]
+  savedByUsers       SavedProperty[]
+
+  @@index([city])
+  @@index([price])
+  @@index([propertyType, purpose])
+  @@index([featured])
+  @@index([status])
+  @@index([createdAt])
+  @@index([slug])
+  @@map("properties")
+}
+
+// 4. Property Images Model
+model PropertyImage {
+  id          String   @id @default(uuid()) @db.Uuid
+  propertyId  String   @map("property_id") @db.Uuid
+  imageUrl    String   @map("image_url") @db.VarChar(255)
+  isCover     Boolean  @default(false) @map("is_cover")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, sortOrder])
+  @@map("property_images")
+}
+
+// 5. Amenities Model
+model Amenity {
+  id         String            @id @default(uuid()) @db.Uuid
+  name       String            @unique @db.VarChar(100)
+  icon       String            @db.VarChar(50)
+  properties PropertyAmenity[]
+
+  @@map("amenities")
+}
+
+// 6. Property Amenities Join Model (Explicit M2M)
+model PropertyAmenity {
+  propertyId String   @map("property_id") @db.Uuid
+  amenityId  String   @map("amenity_id") @db.Uuid
+
+  // Relations
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  amenity    Amenity  @relation(fields: [amenityId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, amenityId])
+  @@map("property_amenities")
+}
+
+// 7. Property Documents Model
+model PropertyDocument {
+  id           String   @id @default(uuid()) @db.Uuid
+  propertyId   String   @map("property_id") @db.Uuid
+  documentName String   @map("document_name") @db.VarChar(150)
+  documentUrl  String   @map("document_url") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  property     Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_documents")
+}
+
+// 8. Property Videos Model
+model PropertyVideo {
+  id         String   @id @default(uuid()) @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  videoUrl   String   @map("video_url") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@map("property_videos")
+}
+
+// 9. Categories Model
+model Category {
+  id    String @id @default(uuid()) @db.Uuid
+  name  String @unique @db.VarChar(100)
+  slug  String @unique @db.VarChar(120)
+  blogs Blog[]
+
+  @@map("categories")
+}
+
+// 10. Blogs Model
+model Blog {
+  id         String   @id @default(uuid()) @db.Uuid
+  title      String   @db.VarChar(200)
+  slug       String   @unique @db.VarChar(255)
+  content    String   @db.Text
+  coverImage String?  @map("cover_image") @db.VarChar(255)
+  categoryId String   @map("category_id") @db.Uuid
+  authorId   String   @map("author_id") @db.Uuid
+  published  Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  author     User     @relation("UserBlogs", fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@map("blogs")
+}
+
+// 11. Testimonials Model
+model Testimonial {
+  id           String   @id @default(uuid()) @db.Uuid
+  customerName String   @map("customer_name") @db.VarChar(100)
+  designation  String?  @db.VarChar(100)
+  photo        String?  @db.VarChar(255)
+  rating       Int      @default(5)
+  review       String   @db.Text
+  approved     Boolean  @default(false)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("testimonials")
+}
+
+// 12. Leads Model
+model Lead {
+  id            String     @id @default(uuid()) @db.Uuid
+  propertyId    String?    @map("property_id") @db.Uuid
+  customerName  String     @map("customer_name") @db.VarChar(100)
+  email         String     @db.VarChar(150)
+  phone         String     @db.VarChar(20)
+  message       String?    @db.Text
+  leadSource    String     @default("WEBSITE") @map("lead_source") @db.VarChar(50)
+  status        LeadStatus @default(NEW)
+  assignedAgent String?    @map("assigned_agent") @db.Uuid
+  visitDate     DateTime?  @map("visit_date") @db.Timestamptz
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  property      Property?  @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  agent         Agent?     @relation("AgentLeads", fields: [assignedAgent], references: [id], onDelete: SetNull)
+
+  @@index([assignedAgent, status])
+  @@index([createdAt])
+  @@map("leads")
+}
+
+// 13. Appointments Model
+model Appointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  propertyId      String            @map("property_id") @db.Uuid
+  customerId      String            @map("customer_id") @db.Uuid
+  agentId         String            @map("agent_id") @db.Uuid
+  appointmentDate DateTime          @map("appointment_date") @db.Timestamptz
+  status          AppointmentStatus @default(SCHEDULED)
+  notes           String?           @db.Text
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  property        Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  customer        User              @relation("CustomerAppointments", fields: [customerId], references: [id], onDelete: Cascade)
+  agent           Agent             @relation("AgentAppointments", fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([appointmentDate])
+  @@map("appointments")
+}
+
+// 14. Saved Properties Model
+model SavedProperty {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  propertyId String   @map("property_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId])
+  @@map("saved_properties")
+}
+
+// 15. FAQs Model
+model Faq {
+  id       String @id @default(uuid()) @db.Uuid
+  question String @db.Text
+  answer   String @db.Text
+  category String @db.VarChar(100)
+
+  @@map("faqs")
+}
+
+// 16. Settings Model
+model Settings {
+  id          String   @id @default(uuid()) @db.Uuid
+  siteName    String   @default("RBM Realestate") @map("site_name") @db.VarChar(100)
+  logo        String?  @db.VarChar(255)
+  email       String   @db.VarChar(150)
+  phone       String   @db.VarChar(20)
+  address     String   @db.Text
+  socialLinks Json?    @map("social_links")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("settings")
+}
