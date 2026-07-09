@@ -42,7 +42,7 @@ const AdminProperties = () => {
   const fetchProperties = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/properties');
+      const res = await axios.get('/api/properties');
       setProperties(res.data);
     } catch (err) {
       console.error('Error fetching properties:', err);
@@ -139,7 +139,7 @@ const AdminProperties = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this property?')) return;
     try {
-      await axios.delete(`http://localhost:5000/api/properties/${id}`);
+      await axios.delete(`/api/properties/${id}`);
       setProperties(properties.filter(p => p.id !== id));
     } catch (err) {
       console.error('Error deleting property:', err);
@@ -164,11 +164,11 @@ const AdminProperties = () => {
     try {
       if (selectedProperty) {
         // Edit Mode
-        const res = await axios.put(`http://localhost:5000/api/properties/${selectedProperty.id}`, submissionData);
+        const res = await axios.put(`/api/properties/${selectedProperty.id}`, submissionData);
         setProperties(properties.map(p => p.id === selectedProperty.id ? { ...p, ...res.data } : p));
       } else {
         // Create Mode
-        const res = await axios.post('http://localhost:5000/api/properties', submissionData);
+        const res = await axios.post('/api/properties', submissionData);
         setProperties([res.data, ...properties]);
       }
       setShowModal(false);

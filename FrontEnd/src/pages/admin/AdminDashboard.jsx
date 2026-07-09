@@ -31,9 +31,9 @@ const AdminDashboard = () => {
       try {
         setLoading(true);
         const [propsRes, leadsRes, appRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/properties'),
-          axios.get('http://localhost:5000/api/leads'),
-          axios.get('http://localhost:5000/api/appointments')
+          axios.get('/api/properties'),
+          axios.get('/api/leads'),
+          axios.get('/api/appointments')
         ]);
 
         setStats({

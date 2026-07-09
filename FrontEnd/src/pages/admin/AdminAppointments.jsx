@@ -17,7 +17,7 @@ const AdminAppointments = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/appointments');
+      const res = await axios.get('/api/appointments');
       setAppointments(res.data);
     } catch (err) {
       console.error('Error fetching appointments:', err);
@@ -41,7 +41,7 @@ const AdminAppointments = () => {
   const handleStatusUpdate = async (id, newStatus) => {
     try {
       setUpdatingId(id);
-      await axios.put(`http://localhost:5000/api/appointments/${id}`, { status: newStatus });
+      await axios.put(`/api/appointments/${id}`, { status: newStatus });
       setAppointments(appointments.map(app => app.id === id ? { ...app, status: newStatus } : app));
     } catch (err) {
       console.error('Failed to update appointment status:', err);

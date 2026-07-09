@@ -18,7 +18,7 @@ const AdminLeads = () => {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/leads');
+      const res = await axios.get('/api/leads');
       setLeads(res.data);
     } catch (err) {
       console.error('Error fetching leads:', err);
@@ -42,7 +42,7 @@ const AdminLeads = () => {
   const handleStatusChange = async (leadId, newStatus) => {
     try {
       setUpdatingId(leadId);
-      await axios.put(`http://localhost:5000/api/leads/${leadId}`, { status: newStatus });
+      await axios.put(`/api/leads/${leadId}`, { status: newStatus });
       setLeads(leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l));
     } catch (err) {
       console.error('Failed to update lead status:', err);
@@ -54,7 +54,7 @@ const AdminLeads = () => {
   const handleVisitDateChange = async (leadId, dateStr) => {
     try {
       setUpdatingId(leadId);
-      await axios.put(`http://localhost:5000/api/leads/${leadId}`, { visitDate: dateStr });
+      await axios.put(`/api/leads/${leadId}`, { visitDate: dateStr });
       setLeads(leads.map(l => l.id === leadId ? { ...l, visitDate: dateStr } : l));
     } catch (err) {
       console.error('Failed to update visit date:', err);
